@@ -7,8 +7,9 @@ class LightStatus(Enum):
     GREEN = 2
 
 
-class IntersectionDirection(Enum):
+class Directions(Enum):
     """
+    THE displacement is already tweaked to work with a matrix of the form [row][col]
     1) z, 2) -z, 3) x, 4) -x (z=y)
 
          z
@@ -22,4 +23,8 @@ class IntersectionDirection(Enum):
         _____3_     ________
                |   1|
     """
+    UP = (-1, 0)
+    LF = (0, -1)
+    RH = (0, 1)
+    DW = (1, 0)
 

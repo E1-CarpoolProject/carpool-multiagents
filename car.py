@@ -6,7 +6,7 @@ positions = [[1, 1], [1, 2], [1, 3], [2, 1], [2, 2], [2, 3]]
 
 
 class CarAgent(Agent):
-    """ An agent with fixed initial wealth."""
+
     def __init__(self, unique_id, model):
         super().__init__(unique_id, model)
         a = np.random.randint(len(positions))
@@ -22,7 +22,6 @@ class CarAgent(Agent):
         self.y_next_stop = 0
         self.occupancy = 1
         self.capacity = 5
-        # REVISAR
         self.passengers = []
 
     def step(self):
@@ -38,6 +37,9 @@ class CarAgent(Agent):
     def arrive_at_destination(self):
         return self.x_pos == self.x_destination and self.y_pos == self.y_destination
 
+    def can_drop_passenger(self):
+        pass
+
     def pick_up(self):
         if self.occupancy < self.capacity:
             self.occupancy += 1
@@ -46,9 +48,11 @@ class CarAgent(Agent):
             print("El coche está lleno :(")
             return False
 
+
 class CarModel(Model):
     """A model with some number of agents."""
     def __init__(self, N):
+        super().__init__()
         self.num_agents = N
         self.schedule = RandomActivation(self)
         # Create agents

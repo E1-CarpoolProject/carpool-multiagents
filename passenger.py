@@ -8,6 +8,7 @@ positions = [[1, 1], [1, 2], [1, 3], [2, 1], [2, 2], [2, 3]]
 class PassengerAgent(Agent):
     def __init__(self, unique_id, model):
         super().__init__(unique_id, model)
+
         #posiciones de origen y destino random
         a = np.random.randint(len(positions))
         while True:
