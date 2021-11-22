@@ -3,7 +3,8 @@ import copy
 from mesa import Agent, Model
 from mesa.time import RandomActivation, BaseScheduler
 
-from car import CarAgent
+from car import CarModel
+from passenger import PassengerModel
 from enums import Directions
 from intersection import IntersectionModel
 
@@ -25,75 +26,101 @@ def print_mat(matrix):
 
             row_str += f"{item}  "
         print(row_str)
+    print()
 
 
 class RouterAgent(Agent):
-    def __init__(self, unique_id: int, model: Model, environment_data):
+
+    def __init__(
+        self,
+        unique_id: int,
+        model: Model,
+        environment_data,
+        agents_data,
+        intersection_model,
+        car_model: CarModel,
+        passenger_model: PassengerModel,
+    ):
         super().__init__(unique_id, model)
-
         self.environment = copy.deepcopy(environment_data)
-        self.intersection_model = self.build_intersections()
+        self.intersection_model = intersection_model
+        self.car_model = car_model
+        self.passenger_model = passenger_model
+        self.agents = []
 
-    def build_intersections(self) -> (IntersectionModel, dict):
+    def make_agents_map(self):
+        for _ in range(len(self.environment)):
+            self.agents.append(["0"] * len(self.environment[0]))
+
+        for key, car in self.car_model.car_map.items():
+            self.agents[car.pos[0]][car.pos[1]] = key
+
+        for key, passenger in self.passenger_model.passenger_map.items():
+            self.agents[passenger.pos[0]][passenger.pos[1]] = key
+
+        print_mat(self.agents)
+
+    def move_car_position(self, previous, new):
         """
-        This function check on all the board which columns are intersections, and then for each
-        intersection determines which directions are involved in it. Given that the streets are
-        one way only, we have two directions involved in an intersection. After this, it initializes
-        the intersection model and returns a dictionary of the intersection objects. The key is
-        the number of the cell, starting at [0, 0] and counting leftwards and then downwards.
-        :return: The dictionary of intersections.
+        Update the car position by one unit in the map.
+        :param previous:
+        :param new:
+        :return:
         """
-        intersections_input = {}
-        n_rows = len(self.environment)
-        n_cols = len(self.environment[0])
+        car = self.agents[previous[0]][previous[1]]
+        self.agents[previous[0]][previous[1]] = "00"
+        self.agents[new[0]][new[1]] = car
 
-        for row_index in range(n_rows):
-            for col_index in range(n_cols):
-                if self.environment[row_index][col_index] == "IN":
-                    intersection_index = n_rows * row_index + col_index
-                    directions_to_go, directions_to_stop = self.find_intersection_directions(
-                        row_index, col_index
-                    )
-                    intersections_input[intersection_index] = {
-                        "x": row_index,
-                        "y": col_index,
-                        "directions_to_stop": directions_to_stop,
-                        "directions_to_go": directions_to_go,
-                    }
-
-        intersection_model = IntersectionModel(intersections_input)
-        return intersection_model
-
-    def find_intersection_directions(self, row: int, col: int) -> (list, list):
+    def get_adjacent_passenger(self, pos):
         """
-        Function that finds the directions involved in an intersection and returns a list of them
-        :param row: The row index of the intersection
-        :param col: The column index of the intersection
-        :return: List of the directions involved in the intersection
+        Obtain the passenger that is adjacent to the car in case there is one
+        :param pos:
+        :return:
         """
-        print(f"Intersection: {row}, {col}")
-        possible_directions = [str(direction).split(".")[-1] for direction in Directions]
-        directions_to_stop = set()
-        directions_to_go = set()
-
-        for direction_name in possible_directions:
-            displacement = Directions[direction_name].value
-            test_row = row + displacement[0]
-            test_col = col + displacement[1]
+        passenger = None
+        for direction in Directions:
+            displacement = direction.value
+            trial_row = pos[0] + displacement[0]
+            trial_col = pos[1] + displacement[1]
 
             try:
-                coming_direction = self.environment[test_row][test_col]
-                print(coming_direction, direction_name)
-                if coming_direction == direction_name:
-                    directions_to_go.add(direction_name)
+                agent = self.agents[trial_row][trial_col]
+                is_passenger = ord("A") <= ord(agent) <= ord("Z")
 
-                elif coming_direction in possible_directions:
-                    directions_to_stop.add(coming_direction)
+                if is_passenger:
+                    potential_passenger = self.passenger_model.passenger_map[agent]
+                    if potential_passenger.needs_ride():
+                        passenger = potential_passenger
+                        break
 
             except IndexError:
                 continue
 
-        return list(directions_to_go), list(directions_to_stop)
+        return passenger
+
+    def get_possible_directions(self, pos):
+        """
+        Obtain the possible directions that a car can move to from a give position
+        :param pos:
+        :return:
+        """
+        n_cols = len(self.environment[0])
+        directions = []
+
+        row, col = pos
+        direction = self.environment[row][col]
+
+        if direction == "IN":
+            intersection_index = n_cols * row + col
+            directions_to_go = self.intersection_model.intersection_map[
+                intersection_index].directions_to_go
+            for direction in directions_to_go:
+                directions.append(direction)
+
+        else:
+            directions.append(direction)
+
+        return directions
 
     def get_environment_state(self):
         env = copy.deepcopy(self.environment)
@@ -103,22 +130,23 @@ class RouterAgent(Agent):
             env[row][col] = active_direction
         return env
 
-    def get_closest_passenger(self, car: CarAgent):
-        pass
-
     def step(self):
         self.intersection_model.step()
-        print_mat(self.get_environment_state())
 
 
 class RouterModel(Model):
     """A model with some number of agents."""
 
-    def __init__(self, environment_data):
+    def __init__(
+        self, environment_data, agents_data, intersection_model, car_model, passenger_model
+    ):
         super().__init__()
         self.schedule = BaseScheduler(self)
-        a = RouterAgent(unique_id=0, model=self, environment_data=environment_data)
+        a = RouterAgent(
+            0, self, environment_data, agents_data, intersection_model, car_model, passenger_model
+        )
         self.schedule.add(a)
+        self.single = a
 
     def step(self):
         """Advance the model by one step."""

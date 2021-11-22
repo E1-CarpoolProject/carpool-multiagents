@@ -1,28 +1,38 @@
 from car import CarModel
 from passenger import PassengerModel
 from traffic_light import TrafficLight
-from router import RouterModel
-from environment import ENVIRONMENT
+from environment import ENVIRONMENT, AGENTS
+from setup_simulation import Setup
+
+
+def print_mat(matrix):
+    for row in matrix:
+        row_str = ""
+        for item in row:
+            if item == "00":
+                item = "■"
+            elif item == "LF":
+                item = "←"
+            elif item == "UP":
+                item = "↑"
+            elif item == "DW":
+                item = "↓"
+            elif item == "RH":
+                item = "→"
+
+            row_str += f"{item}  "
+        print(row_str)
+    print()
 
 
 if __name__ == "__main__":
+    # Inicializar el ambiente
+    simulation_builder = Setup(ENVIRONMENT, AGENTS)
+    router_model = simulation_builder.make_simulation()
+    cars, passengers = simulation_builder.gather_agents_info()
 
-	# Inicializar el ambiente
-	router = RouterModel(environment_data=ENVIRONMENT)
-	for i in range(10):
-		print(f"NEW TICK {i}")
-		router.step()
-		print()
-
-
-	# # inicializa 5 pasajeros
-	# passenger_model = PassengerModel(5)
-	# passenger_model.step()
-	#
-	# # inicializa 5 coches
-	# car_model = CarModel(5)
-	# car_model.step()
-	#
-	# # # para recorrer la lista de agentes
-	# # for agent in passenger_model.schedule.agents:
-	# # 	print(agent.needs_ride())
+    for i in range(10):
+        print(f"\nNEW TICK {i+1}")
+        router_model.step()
+        mat = router_model.schedule.agents[0].get_environment_state()
+        print_mat(mat)

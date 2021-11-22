@@ -7,7 +7,6 @@ TICKS_TO_CHANGE = 2
 
 
 class IntersectionAgent(Agent):
-    """ An agent with fixed initial wealth."""
 
     def __init__(self, unique_id, model, intersection_data):
         """
@@ -56,33 +55,23 @@ class IntersectionAgent(Agent):
             self.change_traffic_light_status()
             self.ticks_to_light_change = TICKS_TO_CHANGE
 
-        # status = f"""
-        # Intersection
-        # x: {self.x_mid}, y: {self.y_mid}
-        # Traffic lights status:"""
-        # status += "\n"
-        # for direction, light in self.traffic_lights.items():
-        #     status += f"\t\t {direction}: {light.status}"
-        # status += "\n"
-        # print(status)
-
     def get_active_direction(self):
         return self.directions_to_stop[self.active_light]
 
 
 class IntersectionModel(Model):
-    """A model with some number of agents."""
 
     def __init__(self, intersection_input):
         super().__init__()
         self.schedule = BaseScheduler(self)
         self.intersection_map = {}
+        print("\nInitializing intersections")
         for key, data in intersection_input.items():
+            print(f"Key: {key}")
             a = IntersectionAgent(unique_id=key, model=self, intersection_data=data)
             self.schedule.add(a)
             self.intersection_map[key] = a
+        print()
 
     def step(self):
-        '''Advance the model by one step.'''
         self.schedule.step()
-
