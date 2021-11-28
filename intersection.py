@@ -73,5 +73,6 @@ class IntersectionModel(Model):
             self.intersection_map[key] = a
         print()
 
+
     def step(self):
         self.schedule.step()

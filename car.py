@@ -49,6 +49,47 @@ class CarAgent(Agent):
         return potential_passenger, potential_route
 
     def step(self):
+        """"
+        PRIMER ALGORITMO -> Optimizamos la cantidad de carros
+        PROS
+        -> Se recogen a todos los pasajeros
+        -> Se pueden instanciar aleatoriamente los pasajeros
+        CONS
+        -> Puede ser que se desvie muchisimo de su ruta a destino final, multiples veces
+        -> Tiempo
+
+        Pickup
+        [Lista de drop]
+        Encunetrna mas cercano -> destino -> agregar a lista de pickup
+        Va recogerlo ->
+            Por cada destino en lista de drop -> Actualizar ruta y distancia -> Hacer BFS
+            Vuelve a encontrar al mas cercano -> ruta potencial -> Distancia
+            Determina si es mas facil ir a dejar a algun pasajero o ir a recoger a pasajero
+            potencial
+        Ir a mi destino final
+        """
+
+        """
+        SEGUNDO ALGORITMO 
+        PROS
+        -> Optimizamos la ruta de cada carro
+        -> Optimiza el tiempo
+        -> Permite instanciar carros 
+        CONS
+        -> Es posible que uno o varios pasajeros no tengan ride
+        
+        Pickup
+        Determinar ruta optima a mi destino -> Optima
+        Encontrar mas cercano -> obtener ruta de llegada -> Obtener punto de drop 
+        Posicion del carro -> Posicion de pickup -> Posicion de drop -> Posicion destino
+        Trazar ruta -> obtener longitud 
+        Longitud / Optima > Treshold -> Reccoges 
+        """
+
+        """
+        PREGUNTAS
+        Carros o pasajeros podrian instanciarse aleatoriamente? --> Mas riesgo de quedarse sin ride
+        """
         passenger, route = self.find_nearest_passenger()
         print(f"\nI am car {self.key}, my position is {self.pos}")
         print(f"In this turn, I will go for passenger {passenger.key if passenger else 'None'}")

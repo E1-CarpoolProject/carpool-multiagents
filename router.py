@@ -9,26 +9,6 @@ from enums import Directions
 from intersection import IntersectionModel
 
 
-def print_mat(matrix):
-    for row in matrix:
-        row_str = ""
-        for item in row:
-            if item == "00":
-                item = "■"
-            elif item == "LF":
-                item = "←"
-            elif item == "UP":
-                item = "↑"
-            elif item == "DW":
-                item = "↓"
-            elif item == "RH":
-                item = "→"
-
-            row_str += f"{item}  "
-        print(row_str)
-    print()
-
-
 class RouterAgent(Agent):
 
     def __init__(
@@ -57,8 +37,6 @@ class RouterAgent(Agent):
 
         for key, passenger in self.passenger_model.passenger_map.items():
             self.agents[passenger.pos[0]][passenger.pos[1]] = key
-
-        print_mat(self.agents)
 
     def move_car_position(self, previous, new):
         """
