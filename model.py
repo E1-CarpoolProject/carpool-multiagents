@@ -25,9 +25,13 @@ class CarpoolModel(Model):
                 "pick_drop_passengers",
             ],
         )
-        self.passenger_creation_delay = 5
-        self.car_creation_delay = 10
+        self.passenger_limit = 0
+        self.passenger_count = 0
+        self.passenger_creation_delay = 1
         self.passenger_tick = self.passenger_creation_delay
+        self.car_limit = 200
+        self.car_count = 0
+        self.car_creation_delay = 1
         self.car_tick = self.car_creation_delay
 
         intersections, roads, sidewalks = parse_environment(environment)
@@ -44,6 +48,8 @@ class CarpoolModel(Model):
             a = Sidewalk(self.next_id(), self, **sidewalk)
             self.schedule.add(a)
 
+        self.kill_list = []
+
     def step(self):
         """
         In each turn, first verify it is possible to instantiate a new agent. Then, execute the
@@ -54,15 +60,22 @@ class CarpoolModel(Model):
         self.passenger_tick -= 1
         self.car_tick -= 1
 
-        if not self.passenger_tick:
+        if not self.passenger_tick and self.passenger_count < self.passenger_limit:
             self.create_agent(Passenger)
             self.passenger_tick = self.passenger_creation_delay
+            self.passenger_count += 1
 
-        if not self.car_tick:
+        if not self.car_tick and self.car_count < self.car_limit:
             self.create_agent(Car)
             self.car_tick = self.car_creation_delay
+            self.car_count += 1
 
         self.schedule.step()
+
+        for agent in self.kill_list:
+            self.grid.remove_agent(agent)
+            self.schedule.remove(agent)
+        self.kill_list = []
 
     def create_agent(self, agent_class: Union[Type[Passenger], Type[Car]]):
         """
@@ -188,7 +201,8 @@ def agent_portrayal(agent):
         portrayal["Shape"] = f"shapes/car_{agent.direction}.png"
         portrayal["scale"] = "1"
         portrayal["Layer"] = "3"
-        # portrayal["text"] = "Car " + str(agent.unique_id)
+        portrayal["text"] = f"Car {agent.unique_id}"
+        portrayal["text_color"] = "#AA08F8"
 
     elif isinstance(agent, Intersection):
         portrayal["Shape"] = "arrowHead"
@@ -205,6 +219,8 @@ def agent_portrayal(agent):
         portrayal["w"] = 0.7
         portrayal["h"] = 0.7
         portrayal["Layer"] = "1"
+        portrayal["text"] = agent.text
+        portrayal["text_color"] = "black"
 
     elif isinstance(agent, Road):
         portrayal["Shape"] = "arrowHead"
@@ -213,11 +229,15 @@ def agent_portrayal(agent):
         portrayal["heading_y"] = Directions[agent.direction].value[1]
         portrayal["Layer"] = "1"
         portrayal["Color"] = "lightgray"
+        portrayal["text"] = agent.text
+        portrayal["text_color"] = "black"
 
     elif isinstance(agent, Passenger):
         if not agent.is_traveling:
             portrayal["Shape"] = f"shapes/passenger_{'final' if agent.has_arrived else 'waiting'}.png"
             portrayal["scale"] = "1"
             portrayal["Layer"] = "3"
+            portrayal["text"] = f"{agent.unique_id}"
+            portrayal["text_color"] = "white"
 
     return portrayal
