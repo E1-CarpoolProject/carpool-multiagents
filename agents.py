@@ -1,6 +1,6 @@
 from __future__ import annotations
 from copy import copy
-from typing import List
+from typing import List, Set, Optional
 
 from mesa import Agent, Model
 
@@ -37,28 +37,15 @@ class Car(Agent):
         road = [agent for agent in road_destination if isinstance(agent, Road)][0]
         road.text = f"{self.unique_id}"
 
-    def find_nearest_passenger(self) -> (Passenger, List[str]):
+
+    def find_optimal_routes(self, passengers: List[Passenger]) -> List[str]:
         """
-        Find the nearest passenger by using a BFS.
-        :return: Return the passenger and the list of movements to reach it
+        Find the optimal routes to a set of points by using a BFS. Note that a single search is
+        used to find all the objectives, reducing the complexity. Objectives must be passengers
+        to be dropped.
+        :param passengers: List of passengers to be dropped
+        :return: List of tuples (Passenger, ["UP", "DW", "LF"])
         """
-        potential_passenger, potential_route = None, []
-        q = [(self.pos, [])]
-        visited = set()
-        while q:
-            curr_tile, curr_route = q.pop(0)
-
-            adjacent_passenger = self.get_adjacent_passenger(curr_tile)
-            if adjacent_passenger:
-                potential_passenger, potential_route = adjacent_passenger, curr_route
-                break
-
-            next_tiles = self.next_direction(curr_tile, curr_route, visited)
-            q += next_tiles
-
-        return potential_passenger, potential_route
-
-    def find_optimal_routes(self, passengers: list) -> list:
         routes = []
         q = [(self.pos, [])]
         visited = set()
@@ -87,7 +74,11 @@ class Car(Agent):
 
         return routes
 
-    def shortest_route_home(self):
+    def shortest_route_home(self) -> List[str]:
+        """
+        Find the optimal route to the destination from the current position.
+        :return: List of directions in the route
+        """
         q = [(self.pos, [])]
         visited = set()
         route = None
@@ -103,43 +94,54 @@ class Car(Agent):
 
         return route
 
-    def next_direction(self, curr_tile, curr_route, visited):
-        directions = []
-        possible_directions = self.get_possible_directions(curr_tile)
-        for direction in possible_directions:
-            displacement = Directions[direction].value
-            next_row = curr_tile[0] + displacement[0]
-            next_col = curr_tile[1] + displacement[1]
-            next_pos = (next_row, next_col)
-            if next_pos not in visited:
-                next_route = copy(curr_route)
-                next_route.append(direction)
-                directions.append((next_pos, next_route))
-                visited.add(next_pos)
-        return directions
+    def receive_passenger_confirmation(self, passenger: Passenger, route: List[str]):
+        """Receive a confirmation from a passenger. This sets the pickup objective and the route"""
+        self.pickup = (passenger, route)
 
-    def get_possible_directions(self, coords) -> list:
+    def apply_movement(self, next_direction: str):
+        """Apply a direction movement"""
+        disp = Directions[next_direction].value
+        x_new, y_new = self.pos[0] + disp[0], self.pos[1] + disp[1]
+        return x_new, y_new
+
+    def notify_passenger(self):
         """
-        Obtain the possible directions that a car can go to
-        :return: List of directions
+        TURN PART 1
+        In this fragment of the turn, if the car does not have a pickup and if it has capacity,
+        it will search for the nearest passenger.
+        :return:
         """
-        directions = []
-        cell = self.model.grid.get_cell_list_contents([coords])
-        road = [road for road in cell if isinstance(road, Road)]
-        intersection = [intersec for intersec in cell if isinstance(intersec, Intersection)]
+        if not self.pickup and len(self.passengers) < self.capacity:
+            passenger, route = self.find_nearest_passenger()
+            if passenger:
+                passenger.receive_possible_ride(self, route)
 
-        if road:
-            directions.append(road[0].direction)
-
-        elif intersection:
-            directions += intersection[0].directions_to_go
-
-        return directions
-
-    def get_adjacent_passenger(self, coords) -> Passenger:
+    def find_nearest_passenger(self) -> Optional[(Passenger, List[str])]:
         """
-        Obtain a passenger that is in an adjacent cell to the car.
-        :return: Passenger to go
+        Find the nearest passenger by using a BFS.
+        :return: Return the passenger and the list of movements to reach it
+        """
+        potential_passenger, potential_route = None, []
+        q = [(self.pos, [])]
+        visited = set()
+        while q:
+            curr_tile, curr_route = q.pop(0)
+
+            adjacent_passenger = self.get_adjacent_passenger(curr_tile)
+            if adjacent_passenger:
+                potential_passenger, potential_route = adjacent_passenger, curr_route
+                break
+
+            next_tiles = self.next_direction(curr_tile, curr_route, visited)
+            q += next_tiles
+
+        return potential_passenger, potential_route
+
+    def get_adjacent_passenger(self, coords: (int, int)) -> Optional[Passenger]:
+        """
+        Utility function. Obtain a passenger that is in an adjacent cell to the specified position,
+        if any.
+        :return: Passenger adjacent to the position.
         """
         adjacent_passenger = None
         adjacent_agents = self.model.grid.get_neighbors(
@@ -156,34 +158,12 @@ class Car(Agent):
 
         return adjacent_passenger
 
-    def receive_passenger_confirmation(self, passenger, route):
-        """Receive a confirmation from a passenger. This sets the pickup objective and the route"""
-        self.pickup = (passenger, route)
-
-    def apply_movement(self, next_direction):
-        """Apply a direction movement"""
-        disp = Directions[next_direction].value
-        x_new, y_new = self.pos[0] + disp[0], self.pos[1] + disp[1]
-        return x_new, y_new
-
-    def notify_passenger(self):
-        """
-        In this fragment of the turn, if the car does not have a pickup and if it has capacity,
-        it will search for the nearest passenger.
-        :return:
-        """
-        if not self.pickup and len(self.passengers) < self.capacity:
-            passenger, route = self.find_nearest_passenger()
-            if passenger:
-                passenger.receive_possible_ride(self, route)
-                # print(f"I am car {self.unique_id}. I will notify passenger {passenger.unique_id}")
-
     def confirm_car(self):
-        """Turn fragment not implemented for this agent"""
+        """TURN PART 2 Turn fragment not implemented for this agent"""
         pass
 
     def tick_traffic_lights(self):
-        """Turn fragment not implemented for this agent"""
+        """TURN PART 3 Turn fragment not implemented for this agent"""
         pass
 
     def move_cars(self):
@@ -237,19 +217,18 @@ class Car(Agent):
                 self.route = self.shortest_route_home()
                 self.objective = self
 
-        try:
-            next_direction = self.route.pop(0)
-        except IndexError:
-            print(f"Error in car {self.unique_id} at position {self.pos}")
+        next_direction = self.route.pop(0)
         x_new, y_new = self.apply_movement(next_direction)
 
         cell = self.model.grid.get_cell_list_contents([(x_new, y_new)])
         intersection = [agent for agent in cell if isinstance(agent, Intersection)]
         car = [agent for agent in cell if isinstance(agent, Car)]
+
         if intersection:
             if intersection[0].get_active_direction() != self.direction:
                 self.route.insert(0, next_direction)
                 return
+
         elif car:
             self.route.insert(0, next_direction)
             return
@@ -258,17 +237,18 @@ class Car(Agent):
         self.pos = (x_new, y_new)
         self.direction = next_direction
         Car.movements += 1
+
         for i in range(len(self.passengers)):
             self.model.grid.move_agent(self.passengers[i], self.pos)
             self.passengers[i].pos = self.pos
 
     def pick_drop_passengers(self):
         """
+        TURN PART 5
         Determine if it is possible to pickup or drop the objective depending on the Passenger´s
         state.
         :return:
         """
-        # print(f"Pick drop with car {self.unique_id} Position: {self.pos}")
         adjacent_agents = self.model.grid.get_neighbors(
             pos=self.pos, moore=False, include_center=False, radius=1
         )
@@ -294,6 +274,54 @@ class Car(Agent):
                         self.objective.drop()
                         self.objective = None
                         break
+
+    def get_possible_directions(self, coords: (int, int)) -> List[str]:
+        """
+        Utility function. Obtain the possible directions that a car can go to from a specified
+        position.
+        :return: List of directions
+        """
+        directions = []
+        cell = self.model.grid.get_cell_list_contents([coords])
+        road = [road for road in cell if isinstance(road, Road)]
+        intersection = [intersec for intersec in cell if isinstance(intersec, Intersection)]
+
+        if road:
+            directions.append(road[0].direction)
+
+        elif intersection:
+            directions += intersection[0].directions_to_go
+
+        return directions
+
+    def next_direction(
+        self, curr_tile: (int, int), curr_route: List[str], visited: Set[(int, int)]
+    ) -> List[((int, int), List[str])]:
+        """
+        Utility Function. Find the next possible directions given the current position, checking
+        that the resulting tiles have not been visited before. This is a utility function used to
+        avoid repetition in the BFS.
+        :param curr_tile: The current tile in the search
+        :param curr_route: The current route in the search
+        :param visited: The set of visited nodes
+        :return: List of tuples that include the position and route of the next tiles that should be
+        checked.
+        """
+        directions = []
+        possible_directions = self.get_possible_directions(curr_tile)
+        for direction in possible_directions:
+            displacement = Directions[direction].value
+            next_row = curr_tile[0] + displacement[0]
+            next_col = curr_tile[1] + displacement[1]
+            next_pos = (next_row, next_col)
+
+            if next_pos not in visited:
+                next_route = copy(curr_route)
+                next_route.append(direction)
+                directions.append((next_pos, next_route))
+                visited.add(next_pos)
+
+        return directions
 
 
 class Passenger(Agent):
@@ -337,7 +365,6 @@ class Passenger(Agent):
             nearest_car = min(self.possible_rides.keys(), key=lambda x: len(self.possible_rides[x]))
             self.is_waiting = True
             Passenger.passengers_without_ride -= 1
-            # print(f"Sending a message to car {nearest_car.unique_id} for confirmation")
             nearest_car.receive_passenger_confirmation(self, self.possible_rides[nearest_car])
 
     def tick_traffic_lights(self):

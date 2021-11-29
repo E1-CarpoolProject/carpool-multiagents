@@ -9,8 +9,16 @@ from agents import Passenger, Car, Road, Intersection, Sidewalk
 
 
 class CarpoolModel(Model):
-    def __init__(self, environment, passenger_limit, passenger_inst_limit, passenger_delay,
-                 car_limit, car_inst_limit, car_delay):
+    def __init__(
+        self,
+        environment,
+        passenger_limit,
+        passenger_inst_limit,
+        passenger_delay,
+        car_limit,
+        car_inst_limit,
+        car_delay,
+    ):
         super().__init__()
         self.width = len(environment[0])
         self.height = len(environment)
@@ -52,6 +60,7 @@ class CarpoolModel(Model):
             self.schedule.add(a)
 
         self.kill_list = []
+        self.new_cars = []
         Car.movements = 0
 
     def step(self):
@@ -75,8 +84,10 @@ class CarpoolModel(Model):
 
         if not self.car_tick:
             while self.car_count < self.car_limit and inst_car < self.inst_car_limit:
-                self.create_agent(Car)
+                car = self.create_agent(Car)
                 self.car_count += 1
+                self.new_cars.append(car)
+                inst_car += 1
             self.car_tick = self.car_creation_delay
 
         self.schedule.step()
@@ -86,11 +97,11 @@ class CarpoolModel(Model):
             self.schedule.remove(agent)
         self.kill_list = []
 
-        print(Car.moving_cars)
-        if Car.moving_cars == 0:
-            print("Final simulation statistics")
-            print(f"Total car movements: {Car.movements}")
-            self.running = False
+        # print(Car.moving_cars)
+        # if Car.moving_cars == 0:
+        #     print("Final simulation statistics")
+        #     print(f"Total car movements: {Car.movements}")
+        #     self.running = False
 
     def create_agent(self, agent_class: Union[Type[Passenger], Type[Car]]):
         """
@@ -103,6 +114,7 @@ class CarpoolModel(Model):
         dest_pos = self.find_rand_cell(lookup_class, start_pos)
         a = agent_class(self.next_id(), self, start_pos, dest_pos)
         self.schedule.add(a)
+        return a
 
     def find_rand_cell(
         self, lookup_class: Union[Type[Sidewalk], Type[Road]], exclude_cells=None
@@ -133,6 +145,54 @@ class CarpoolModel(Model):
                 found_useful_cell = True
 
         return pos_x, pos_y
+
+    def get_cars_data(self):
+        cars_data = []
+        for agent in self.schedule.agents:
+            if isinstance(agent, Car) and agent not in self.new_cars:
+                cars_data.append({"next_direction": agent.direction})
+        return cars_data
+
+    def get_traffic_lights_data(self):
+        horizontal = []
+        vertical = []
+        for agent in self.schedule.agents:
+            if isinstance(agent, Intersection):
+                for traffic_light in agent.traffic_lights.values():
+                    data = {"state": traffic_light.status}
+                    data_list = (
+                        horizontal
+                        if traffic_light.direction in [Directions.RH.name, Directions.LF.name]
+                        else vertical
+                    )
+                    data_list.append(data)
+        horizontal.reverse()
+        vertical.reverse()
+        traffic_data = vertical + horizontal
+        return traffic_data
+
+    def get_new_car_data(self):
+        new_cars_data = []
+        for car in self.new_cars:
+            new_cars_data.append({
+                "x": car.pos[0],
+                "y": 0,
+                "z": car.pos[1]
+            })
+        self.new_cars = []
+        return new_cars_data
+
+    def get_passenger_data(self):
+        passengers = []
+        for agent in self.schedule.agents:
+            if isinstance(agent, Passenger) and not agent.is_traveling:
+                passengers.append({
+                    "x": agent.pos[0],
+                    "y": 0,
+                    "z": agent.pos[1],
+                    "arrived": agent.has_arrived
+                })
+        return passengers
 
 
 def parse_environment(environment: list) -> (list, list, list):
@@ -249,7 +309,9 @@ def agent_portrayal(agent):
 
     elif isinstance(agent, Passenger):
         if not agent.is_traveling:
-            portrayal["Shape"] = f"shapes/passenger_{'final' if agent.has_arrived else 'waiting'}.png"
+            portrayal[
+                "Shape"
+            ] = f"shapes/passenger_{'final' if agent.has_arrived else 'waiting'}.png"
             portrayal["scale"] = "1"
             portrayal["Layer"] = "3"
             portrayal["text"] = f"{agent.unique_id}"
