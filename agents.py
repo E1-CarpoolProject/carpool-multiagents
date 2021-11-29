@@ -1,20 +1,27 @@
 from __future__ import annotations
 from copy import copy
+from typing import List
 
 from mesa import Agent, Model
 
 from enums import Directions, LightStatus
 
-# from model import CarpoolModel
-
-INTERSECTION_LENGTH = 50
-TICKS_TO_CHANGE = 5
+TICKS_TO_CHANGE = 2
 
 
 class Car(Agent):
     capacity = 5
+    movements = 0
+    moving_cars = 0
 
-    def __init__(self, unique_id, model: Model, start, destination):
+    def __init__(self, unique_id, model: Model, start: (int, int), destination: (int, int)):
+        """
+        Initialize a Car agent with a specified start and final position
+        :param unique_id: int
+        :param model: CarpoolModel
+        :param start: (x, y) tuple
+        :param destination:  (x, y) tuple
+        """
         super().__init__(unique_id, model)
         self.pos = start
         self.destination = destination
@@ -24,16 +31,16 @@ class Car(Agent):
         self.drops = []
         self.pickup = None
         self.objective = None
-
         self.model.grid.place_agent(self, self.pos)
+        Car.moving_cars += 1
         road_destination = self.model.grid.get_cell_list_contents([self.destination])
         road = [agent for agent in road_destination if isinstance(agent, Road)][0]
         road.text = f"{self.unique_id}"
 
-    def find_nearest_passenger(self):
+    def find_nearest_passenger(self) -> (Passenger, List[str]):
         """
         Find the nearest passenger by using a BFS.
-        :return:
+        :return: Return the passenger and the list of movements to reach it
         """
         potential_passenger, potential_route = None, []
         q = [(self.pos, [])]
@@ -62,16 +69,15 @@ class Car(Agent):
                 for direction in Directions:
                     disp = direction.value
                     trial_cell = curr_tile[0] + disp[0], curr_tile[1] + disp[1]
+
                     if passenger.is_traveling:
                         if trial_cell == passenger.destination:
                             routes.append((passenger, curr_route))
-                            passengers.remove(passenger)
-                            print("Found a passenger")
+
                     elif passenger.is_waiting:
                         if trial_cell == passenger.pos:
                             routes.append((passenger, curr_route))
                             passengers.remove(passenger)
-                            print("Found a passenger")
 
             if not passengers:
                 break
@@ -152,10 +158,13 @@ class Car(Agent):
 
     def receive_passenger_confirmation(self, passenger, route):
         """Receive a confirmation from a passenger. This sets the pickup objective and the route"""
-        print(
-            f"Just received confirmtion from passenger in {passenger.pos} It is {'waiting' if passenger.is_waiting else 'traveling'}"
-        )
         self.pickup = (passenger, route)
+
+    def apply_movement(self, next_direction):
+        """Apply a direction movement"""
+        disp = Directions[next_direction].value
+        x_new, y_new = self.pos[0] + disp[0], self.pos[1] + disp[1]
+        return x_new, y_new
 
     def notify_passenger(self):
         """
@@ -167,7 +176,7 @@ class Car(Agent):
             passenger, route = self.find_nearest_passenger()
             if passenger:
                 passenger.receive_possible_ride(self, route)
-                print(f"I am car {self.unique_id}. I will notify passenger {passenger.unique_id}")
+                # print(f"I am car {self.unique_id}. I will notify passenger {passenger.unique_id}")
 
     def confirm_car(self):
         """Turn fragment not implemented for this agent"""
@@ -183,38 +192,56 @@ class Car(Agent):
         status of the traffic lights
         :return:
         """
-        # If there is no objective, look for the nearest drop or pickup point
         if not self.objective:
             interest_points = copy(self.drops)
             if self.pickup:
                 interest_points.append(self.pickup[0])
-            print(f"I have no current objective, choosing from {interest_points}")
+
             routes = self.find_optimal_routes(interest_points)
-            print(f"Result from search {routes}")
             if routes:
                 optimal = min(routes, key=lambda x: len(x[1]))
                 self.route = optimal[1]
                 self.objective = optimal[0]
 
         if not self.route:
-            if Passenger.passengers_without_ride > 0:
-                # If we spawned next a passenger by any chance
-                print(f"Passenger count {Passenger.passengers_without_ride}")
-                print("I am just next a passenger")
+            if isinstance(self.objective, Passenger):
                 return
+
+            elif Passenger.passengers_without_ride > 0:
+                cell = self.model.grid.get_cell_list_contents([self.pos])
+                car = [agent for agent in cell if isinstance(agent, Car)]
+                intersection = [agent for agent in cell if isinstance(agent, Intersection)]
+                road = [agent for agent in cell if isinstance(agent, Road)]
+
+                if car:
+                    return
+
+                elif intersection:
+                    if intersection[0].get_active_direction() == self.direction:
+                        direction_to_go = self.random.choice(intersection[0].directions_to_go)
+                        x, y = self.apply_movement(direction_to_go)
+                        self.model.grid.move_agent(self, (x, y))
+                        return
+
+                elif road:
+                    x, y = self.apply_movement(road[0].direction)
+                    self.model.grid.move_agent(self, (x, y))
+                    return
 
             elif self.pos == self.destination:
                 self.model.kill_list.append(self)
+                Car.moving_cars -= 1
                 return
 
             else:
                 self.route = self.shortest_route_home()
                 self.objective = self
 
-        next_direction = self.route.pop(0)
-        print(f"I will move to {next_direction}")
-        disp = Directions[next_direction].value
-        x_new, y_new = self.pos[0] + disp[0], self.pos[1] + disp[1]
+        try:
+            next_direction = self.route.pop(0)
+        except IndexError:
+            print(f"Error in car {self.unique_id} at position {self.pos}")
+        x_new, y_new = self.apply_movement(next_direction)
 
         cell = self.model.grid.get_cell_list_contents([(x_new, y_new)])
         intersection = [agent for agent in cell if isinstance(agent, Intersection)]
@@ -230,6 +257,7 @@ class Car(Agent):
         self.model.grid.move_agent(self, (x_new, y_new))
         self.pos = (x_new, y_new)
         self.direction = next_direction
+        Car.movements += 1
         for i in range(len(self.passengers)):
             self.model.grid.move_agent(self.passengers[i], self.pos)
             self.passengers[i].pos = self.pos
@@ -240,7 +268,7 @@ class Car(Agent):
         state.
         :return:
         """
-        print(f"Pick drop with car {self.unique_id} Position: {self.pos}")
+        # print(f"Pick drop with car {self.unique_id} Position: {self.pos}")
         adjacent_agents = self.model.grid.get_neighbors(
             pos=self.pos, moore=False, include_center=False, radius=1
         )
@@ -309,7 +337,7 @@ class Passenger(Agent):
             nearest_car = min(self.possible_rides.keys(), key=lambda x: len(self.possible_rides[x]))
             self.is_waiting = True
             Passenger.passengers_without_ride -= 1
-            print(f"Sending a message to car {nearest_car.unique_id} for confirmation")
+            # print(f"Sending a message to car {nearest_car.unique_id} for confirmation")
             nearest_car.receive_passenger_confirmation(self, self.possible_rides[nearest_car])
 
     def tick_traffic_lights(self):

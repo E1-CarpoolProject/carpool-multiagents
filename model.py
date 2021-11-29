@@ -9,7 +9,8 @@ from agents import Passenger, Car, Road, Intersection, Sidewalk
 
 
 class CarpoolModel(Model):
-    def __init__(self, environment):
+    def __init__(self, environment, passenger_limit, passenger_inst_limit, passenger_delay,
+                 car_limit, car_inst_limit, car_delay):
         super().__init__()
         self.width = len(environment[0])
         self.height = len(environment)
@@ -25,13 +26,15 @@ class CarpoolModel(Model):
                 "pick_drop_passengers",
             ],
         )
-        self.passenger_limit = 0
+        self.passenger_limit = passenger_limit
+        self.inst_pass_limit = passenger_inst_limit
         self.passenger_count = 0
-        self.passenger_creation_delay = 1
+        self.passenger_creation_delay = passenger_delay
         self.passenger_tick = self.passenger_creation_delay
-        self.car_limit = 200
+        self.car_limit = car_limit
+        self.inst_car_limit = car_inst_limit
         self.car_count = 0
-        self.car_creation_delay = 1
+        self.car_creation_delay = car_delay
         self.car_tick = self.car_creation_delay
 
         intersections, roads, sidewalks = parse_environment(environment)
@@ -49,6 +52,7 @@ class CarpoolModel(Model):
             self.schedule.add(a)
 
         self.kill_list = []
+        Car.movements = 0
 
     def step(self):
         """
@@ -59,16 +63,21 @@ class CarpoolModel(Model):
         """
         self.passenger_tick -= 1
         self.car_tick -= 1
+        inst_car = 0
+        inst_pass = 0
 
-        if not self.passenger_tick and self.passenger_count < self.passenger_limit:
-            self.create_agent(Passenger)
+        if not self.passenger_tick:
+            while self.passenger_count < self.passenger_limit and inst_pass < self.inst_pass_limit:
+                self.create_agent(Passenger)
+                self.passenger_count += 1
+                inst_pass += 1
             self.passenger_tick = self.passenger_creation_delay
-            self.passenger_count += 1
 
-        if not self.car_tick and self.car_count < self.car_limit:
-            self.create_agent(Car)
+        if not self.car_tick:
+            while self.car_count < self.car_limit and inst_car < self.inst_car_limit:
+                self.create_agent(Car)
+                self.car_count += 1
             self.car_tick = self.car_creation_delay
-            self.car_count += 1
 
         self.schedule.step()
 
@@ -76,6 +85,12 @@ class CarpoolModel(Model):
             self.grid.remove_agent(agent)
             self.schedule.remove(agent)
         self.kill_list = []
+
+        print(Car.moving_cars)
+        if Car.moving_cars == 0:
+            print("Final simulation statistics")
+            print(f"Total car movements: {Car.movements}")
+            self.running = False
 
     def create_agent(self, agent_class: Union[Type[Passenger], Type[Car]]):
         """
