@@ -9,10 +9,10 @@ from environment import ENVIRONMENT
 app = Flask(__name__, static_url_path="")
 model = CarpoolModel(
     environment=ENVIRONMENT,
-    passenger_limit=20,
+    passenger_limit=1,
     passenger_inst_limit=1,
     passenger_delay=1,
-    car_limit=5,
+    car_limit=1,
     car_inst_limit=1,
     car_delay=2,
 )
@@ -26,8 +26,9 @@ def root():
 
 @app.route("/new_cars", methods=["GET"])
 def new_cars():
-    model.step()
+    model.instantiate_agents()
     cars_data = model.get_new_car_data()
+    #print(cars_data)
     return json.dumps(cars_data)
 
 
@@ -37,8 +38,9 @@ def traffic_lights():
     return json.dumps(traffic_data)
 
 
-@app.route("/direction", methods=["GET"])
+@app.route("/directions", methods=["GET"])
 def direction():
+    model.step()
     direction_data = model.get_cars_data()
     return json.dumps(direction_data)
 
@@ -46,7 +48,7 @@ def direction():
 @app.route("/passengers", methods=["GET"])
 def passengers():
     passenger_data = model.get_passenger_data()
-    print(model.schedule.steps)
+    print(passenger_data)
     return json.dumps(passenger_data)
 
 

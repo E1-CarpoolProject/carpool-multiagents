@@ -70,6 +70,20 @@ class CarpoolModel(Model):
         several middle steps
         :return:
         """
+        self.schedule.step()
+
+        for agent in self.kill_list:
+            self.grid.remove_agent(agent)
+            self.schedule.remove(agent)
+        self.kill_list = []
+
+        # print(Car.moving_cars)
+        # if Car.moving_cars == 0:
+        #     print("Final simulation statistics")
+        #     print(f"Total car movements: {Car.movements}")
+        #     self.running = False
+        
+    def instantiate_agents(self):
         self.passenger_tick -= 1
         self.car_tick -= 1
         inst_car = 0
@@ -89,20 +103,7 @@ class CarpoolModel(Model):
                 self.new_cars.append(car)
                 inst_car += 1
             self.car_tick = self.car_creation_delay
-
-        self.schedule.step()
-
-        for agent in self.kill_list:
-            self.grid.remove_agent(agent)
-            self.schedule.remove(agent)
-        self.kill_list = []
-
-        # print(Car.moving_cars)
-        # if Car.moving_cars == 0:
-        #     print("Final simulation statistics")
-        #     print(f"Total car movements: {Car.movements}")
-        #     self.running = False
-
+        
     def create_agent(self, agent_class: Union[Type[Passenger], Type[Car]]):
         """
         Instanciate an agent of the specified class, and add it to the schedule
@@ -150,7 +151,7 @@ class CarpoolModel(Model):
         cars_data = []
         for agent in self.schedule.agents:
             if isinstance(agent, Car) and agent not in self.new_cars:
-                cars_data.append({"next_direction": agent.direction})
+                cars_data.append({"next_direction": agent.real_movement})
         return cars_data
 
     def get_traffic_lights_data(self):
@@ -276,7 +277,7 @@ def agent_portrayal(agent):
         portrayal["Shape"] = f"shapes/car_{agent.direction}.png"
         portrayal["scale"] = "1"
         portrayal["Layer"] = "3"
-        portrayal["text"] = f"Car {agent.unique_id}"
+        portrayal["text"] = f"Car {agent.pos}"
         portrayal["text_color"] = "#AA08F8"
 
     elif isinstance(agent, Intersection):

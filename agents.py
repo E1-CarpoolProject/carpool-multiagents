@@ -24,6 +24,7 @@ class Car(Agent):
         """
         super().__init__(unique_id, model)
         self.pos = start
+        print(self.pos)
         self.destination = destination
         self.direction = self.model.grid.get_cell_list_contents([self.pos])[0].direction
         self.route = []
@@ -32,6 +33,7 @@ class Car(Agent):
         self.pickup = None
         self.objective = None
         self.model.grid.place_agent(self, self.pos)
+        self.real_movement = None
         Car.moving_cars += 1
         road_destination = self.model.grid.get_cell_list_contents([self.destination])
         road = [agent for agent in road_destination if isinstance(agent, Road)][0]
@@ -194,6 +196,7 @@ class Car(Agent):
                 road = [agent for agent in cell if isinstance(agent, Road)]
 
                 if car:
+                    self.real_movement = "NA"
                     return
 
                 elif intersection:
@@ -201,16 +204,19 @@ class Car(Agent):
                         direction_to_go = self.random.choice(intersection[0].directions_to_go)
                         x, y = self.apply_movement(direction_to_go)
                         self.model.grid.move_agent(self, (x, y))
+                        self.real_movement = "NA"
                         return
 
                 elif road:
                     x, y = self.apply_movement(road[0].direction)
                     self.model.grid.move_agent(self, (x, y))
+                    self.real_movement = road[0].direction
                     return
 
             elif self.pos == self.destination:
                 self.model.kill_list.append(self)
                 Car.moving_cars -= 1
+                self.real_movement = "NA"
                 return
 
             else:
@@ -227,15 +233,18 @@ class Car(Agent):
         if intersection:
             if intersection[0].get_active_direction() != self.direction:
                 self.route.insert(0, next_direction)
+                self.real_movement = "NA"
                 return
 
         elif car:
             self.route.insert(0, next_direction)
+            self.real_movement = "NA"
             return
 
         self.model.grid.move_agent(self, (x_new, y_new))
         self.pos = (x_new, y_new)
         self.direction = next_direction
+        self.real_movement = self.direction
         Car.movements += 1
 
         for i in range(len(self.passengers)):
