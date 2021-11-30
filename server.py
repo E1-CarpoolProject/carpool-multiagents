@@ -21,20 +21,29 @@ port = int(os.getenv("PORT", 8585))
 
 @app.route("/")
 def root():
-    return jsonify([{"message": "Hello World from IBM Cloud!"}])
+    global model
+    model = CarpoolModel(
+        environment=ENVIRONMENT,
+        passenger_limit=1,
+        passenger_inst_limit=1,
+        passenger_delay=1,
+        car_limit=1,
+        car_inst_limit=1,
+        car_delay=2,
+    )
 
 
 @app.route("/new_cars", methods=["GET"])
 def new_cars():
     model.instantiate_agents()
     cars_data = model.get_new_car_data()
-    #print(cars_data)
     return json.dumps(cars_data)
 
 
 @app.route("/traffic_lights", methods=["GET"])
 def traffic_lights():
     traffic_data = model.get_traffic_lights_data()
+    print(traffic_data)
     return json.dumps(traffic_data)
 
 
@@ -48,7 +57,6 @@ def direction():
 @app.route("/passengers", methods=["GET"])
 def passengers():
     passenger_data = model.get_passenger_data()
-    print(passenger_data)
     return json.dumps(passenger_data)
 
 

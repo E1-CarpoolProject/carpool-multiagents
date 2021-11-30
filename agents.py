@@ -39,7 +39,6 @@ class Car(Agent):
         road = [agent for agent in road_destination if isinstance(agent, Road)][0]
         road.text = f"{self.unique_id}"
 
-
     def find_optimal_routes(self, passengers: List[Passenger]) -> List[str]:
         """
         Find the optimal routes to a set of points by using a BFS. Note that a single search is
@@ -191,13 +190,15 @@ class Car(Agent):
 
             elif Passenger.passengers_without_ride > 0:
                 cell = self.model.grid.get_cell_list_contents([self.pos])
-                car = [agent for agent in cell if isinstance(agent, Car)]
+                cars = [agent for agent in cell if isinstance(agent, Car)]
                 intersection = [agent for agent in cell if isinstance(agent, Intersection)]
                 road = [agent for agent in cell if isinstance(agent, Road)]
 
-                if car:
-                    self.real_movement = "NA"
-                    return
+                if cars:
+                    for car in cars:
+                        if car.pos != car.destination:
+                            self.real_movement = "NA"
+                            return
 
                 elif intersection:
                     if intersection[0].get_active_direction() == self.direction:
@@ -228,7 +229,7 @@ class Car(Agent):
 
         cell = self.model.grid.get_cell_list_contents([(x_new, y_new)])
         intersection = [agent for agent in cell if isinstance(agent, Intersection)]
-        car = [agent for agent in cell if isinstance(agent, Car)]
+        cars = [agent for agent in cell if isinstance(agent, Car)]
 
         if intersection:
             if intersection[0].get_active_direction() != self.direction:
@@ -236,10 +237,12 @@ class Car(Agent):
                 self.real_movement = "NA"
                 return
 
-        elif car:
-            self.route.insert(0, next_direction)
-            self.real_movement = "NA"
-            return
+        elif cars:
+            for car in cars:
+                if car.pos != car.destination:
+                    self.route.insert(0, next_direction)
+                    self.real_movement = "NA"
+                    return
 
         self.model.grid.move_agent(self, (x_new, y_new))
         self.pos = (x_new, y_new)
@@ -460,6 +463,7 @@ class TrafficLight(Agent):
         self.pos = (x, y)
         self.direction = direction
         self.status = LightStatus.RED.value
+        self.id = f"{str(x).zfill(2)}{str(y).zfill(2)}{self.direction}"
 
     def can_pass(self):
         return self.status == LightStatus.GREEN.value

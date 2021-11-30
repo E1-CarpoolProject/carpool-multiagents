@@ -70,20 +70,27 @@ class CarpoolModel(Model):
         several middle steps
         :return:
         """
+        # self.instantiate_agents()
+
         self.schedule.step()
 
-        for agent in self.kill_list:
-            self.grid.remove_agent(agent)
-            self.schedule.remove(agent)
-        self.kill_list = []
+        # for agent in self.kill_list:
+        #     self.grid.remove_agent(agent)
+        #     self.schedule.remove(agent)
+        # self.kill_list = []
 
         # print(Car.moving_cars)
         # if Car.moving_cars == 0:
         #     print("Final simulation statistics")
         #     print(f"Total car movements: {Car.movements}")
         #     self.running = False
-        
+
     def instantiate_agents(self):
+        """
+        Create the agents depending on the current number of agents, the set limits,
+        and the delays.
+        :return:
+        """
         self.passenger_tick -= 1
         self.car_tick -= 1
         inst_car = 0
@@ -148,6 +155,10 @@ class CarpoolModel(Model):
         return pos_x, pos_y
 
     def get_cars_data(self):
+        """
+        Serialize the movements of the cars, sending the direction in which it moved.
+        :return:
+        """
         cars_data = []
         for agent in self.schedule.agents:
             if isinstance(agent, Car) and agent not in self.new_cars:
@@ -155,24 +166,27 @@ class CarpoolModel(Model):
         return cars_data
 
     def get_traffic_lights_data(self):
-        horizontal = []
-        vertical = []
+        """
+        Serialize the status of the traffic lights, sending the id and the state.
+        :return:
+        """
+        traffic_data = []
         for agent in self.schedule.agents:
             if isinstance(agent, Intersection):
                 for traffic_light in agent.traffic_lights.values():
-                    data = {"state": traffic_light.status}
-                    data_list = (
-                        horizontal
-                        if traffic_light.direction in [Directions.RH.name, Directions.LF.name]
-                        else vertical
-                    )
-                    data_list.append(data)
-        horizontal.reverse()
-        vertical.reverse()
-        traffic_data = vertical + horizontal
+                    data = {
+                        "state": traffic_light.status,
+                        "id": traffic_light.id
+                    }
+                    traffic_data.append(data)
         return traffic_data
 
     def get_new_car_data(self):
+        """
+        Serialize the data of the new cars, sending the position in which they instantiated in
+        the map.
+        :return:
+        """
         new_cars_data = []
         for car in self.new_cars:
             new_cars_data.append({
@@ -184,6 +198,11 @@ class CarpoolModel(Model):
         return new_cars_data
 
     def get_passenger_data(self):
+        """
+        Serialize the information about the passengers, sending their position and their status
+        in case they are not travelling.
+        :return:
+        """
         passengers = []
         for agent in self.schedule.agents:
             if isinstance(agent, Passenger) and not agent.is_traveling:
