@@ -52,7 +52,7 @@ def prueba_tres():
     global model
     model = CarpoolModel(
     environment=ENVIRONMENT,
-    passenger_limit=20,
+    passenger_limit=85,
     passenger_inst_limit=86,
     passenger_delay=1,
     car_limit=15,
@@ -78,6 +78,7 @@ def traffic_lights():
 def direction():
     model.step()
     direction_data = model.get_cars_data()
+    #print(direction_data)
     return json.dumps(direction_data)
 
 

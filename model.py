@@ -62,6 +62,7 @@ class CarpoolModel(Model):
         self.kill_list = []
         self.new_cars = []
         Car.movements = 0
+        Passenger.passengers_without_ride = 0
 
     def step(self):
         """
