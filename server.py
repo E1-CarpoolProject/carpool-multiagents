@@ -25,7 +25,7 @@ def prueba_uno():
     model = CarpoolModel(
     environment=ENVIRONMENT,
     passenger_limit=0,
-    passenger_inst_limit=10,
+    passenger_inst_limit=0,
     passenger_delay=1,
     car_limit=100,
     car_inst_limit=25,
@@ -52,11 +52,11 @@ def prueba_tres():
     global model
     model = CarpoolModel(
     environment=ENVIRONMENT,
-    passenger_limit=85,
-    passenger_inst_limit=85,
+    passenger_limit=20,
+    passenger_inst_limit=86,
     passenger_delay=1,
     car_limit=15,
-    car_inst_limit=15,
+    car_inst_limit=16,
     car_delay=2,
 )
     return jsonify([{"message":"Prueba 3"}])
