@@ -42,7 +42,7 @@ def prueba_dos():
     passenger_inst_limit=10,
     passenger_delay=1,
     car_limit=5,
-    car_inst_limit=2,
+    car_inst_limit=5,
     car_delay=2,
 )
     return jsonify([{"message":"Prueba 2"}])
@@ -56,7 +56,7 @@ def prueba_tres():
     passenger_inst_limit=85,
     passenger_delay=1,
     car_limit=15,
-    car_inst_limit=5,
+    car_inst_limit=15,
     car_delay=2,
 )
     return jsonify([{"message":"Prueba 3"}])
