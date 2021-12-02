@@ -24,7 +24,6 @@ class Car(Agent):
         """
         super().__init__(unique_id, model)
         self.pos = start
-        print(self.pos)
         self.destination = destination
         self.direction = self.model.grid.get_cell_list_contents([self.pos])[0].direction
         self.route = []
@@ -217,7 +216,7 @@ class Car(Agent):
             elif self.pos == self.destination:
                 self.model.kill_list.append(self)
                 Car.moving_cars -= 1
-                self.real_movement = "NA"
+                self.real_movement = "PA"
                 return
 
             else:
