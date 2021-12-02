@@ -70,7 +70,7 @@ class CarpoolModel(Model):
         several middle steps
         :return:
         """
-        # self.instantiate_agents()
+        self.instantiate_agents()
 
         self.schedule.step()
 
