@@ -1,3 +1,6 @@
+"""
+Contains the implementation of all the agents of the system.
+"""
 from __future__ import annotations
 from copy import copy
 from typing import List, Set, Optional
@@ -169,8 +172,8 @@ class Car(Agent):
     def move_cars(self):
         """
         Logic that controls the direction of the movement and if it is possible to move given the
-        status of the traffic lights
-        :return:
+        status of the traffic lights. This is the most complex method since it handles the whole
+        movement logic, including long term, temporary, and immediate decisions.
         """
         if not self.objective:
             interest_points = copy(self.drops)

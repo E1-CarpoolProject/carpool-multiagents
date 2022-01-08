@@ -1,3 +1,9 @@
+"""
+Abstraction of the whole model. Handles the initialization of the environment, the spawning of
+the agents, and their turns along the ticks of the system. Also includes methods to serialize the
+state of the system (to work with the Flask server) and to customize the visualization of the agents
+(to work with the Mesa embedded server).
+"""
 from typing import Type, Union
 
 from mesa import Model
@@ -75,16 +81,10 @@ class CarpoolModel(Model):
 
         self.schedule.step()
 
-        # for agent in self.kill_list:
-        #     self.grid.remove_agent(agent)
-        #     self.schedule.remove(agent)
-        # self.kill_list = []
-
-        # print(Car.moving_cars)
-        # if Car.moving_cars == 0:
-        #     print("Final simulation statistics")
-        #     print(f"Total car movements: {Car.movements}")
-        #     self.running = False
+        for agent in self.kill_list:
+            self.grid.remove_agent(agent)
+            self.schedule.remove(agent)
+        self.kill_list = []
 
     def instantiate_agents(self):
         """

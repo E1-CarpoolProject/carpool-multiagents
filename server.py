@@ -1,3 +1,8 @@
+"""
+Simulation that uses a Flask server. It sends the state of the vehicles, passengers, and traffic
+lights at every tick of the system via an HTTP response-request. Designed to interact with the 3D
+Unity visualization of the model.
+"""
 import json
 import os
 
@@ -23,43 +28,46 @@ port = int(os.getenv("PORT", 8585))
 def prueba_uno():
     global model
     model = CarpoolModel(
-    environment=ENVIRONMENT,
-    passenger_limit=0,
-    passenger_inst_limit=0,
-    passenger_delay=1,
-    car_limit=100,
-    car_inst_limit=25,
-    car_delay=2,
-)
-    return jsonify([{"message":"Prueba 1"}])
-    
+        environment=ENVIRONMENT,
+        passenger_limit=0,
+        passenger_inst_limit=0,
+        passenger_delay=1,
+        car_limit=100,
+        car_inst_limit=25,
+        car_delay=2,
+    )
+    return jsonify([{"message": "Prueba 1"}])
+
+
 @app.route("/prueba2")
 def prueba_dos():
     global model
     model = CarpoolModel(
-    environment=ENVIRONMENT,
-    passenger_limit=10,
-    passenger_inst_limit=10,
-    passenger_delay=1,
-    car_limit=5,
-    car_inst_limit=5,
-    car_delay=2,
-)
-    return jsonify([{"message":"Prueba 2"}])
-    
+        environment=ENVIRONMENT,
+        passenger_limit=10,
+        passenger_inst_limit=10,
+        passenger_delay=1,
+        car_limit=5,
+        car_inst_limit=5,
+        car_delay=2,
+    )
+    return jsonify([{"message": "Prueba 2"}])
+
+
 @app.route("/prueba3")
 def prueba_tres():
     global model
     model = CarpoolModel(
-    environment=ENVIRONMENT,
-    passenger_limit=85,
-    passenger_inst_limit=86,
-    passenger_delay=1,
-    car_limit=15,
-    car_inst_limit=16,
-    car_delay=2,
-)
-    return jsonify([{"message":"Prueba 3"}])
+        environment=ENVIRONMENT,
+        passenger_limit=85,
+        passenger_inst_limit=86,
+        passenger_delay=1,
+        car_limit=15,
+        car_inst_limit=16,
+        car_delay=2,
+    )
+    return jsonify([{"message": "Prueba 3"}])
+
 
 @app.route("/new_cars", methods=["GET"])
 def new_cars():
@@ -78,7 +86,6 @@ def traffic_lights():
 def direction():
     model.step()
     direction_data = model.get_cars_data()
-    #print(direction_data)
     return json.dumps(direction_data)
 
 

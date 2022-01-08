@@ -1,3 +1,6 @@
+"""
+Useful abstractions for the existing environment.
+"""
 from enum import Enum
 
 
