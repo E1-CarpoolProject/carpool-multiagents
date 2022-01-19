@@ -2,6 +2,8 @@
 
 Muliagent system that models a carpooling system in a city with one-way streets. Both the vehicles and the passengers have an initial position and a destination. The objective is to have all of them reach their destination, by reducing the amount of car movements. 
 
+This system is deployed in an IBM Cloud Foundry instance. A Flask server serializes the state of all agents at each tick of the system and sends it to Unity for visualization. The Mesa embedded server was also used for 2D visualization. 
+
 ## Simulation
 
 Several tests were done to benchmark the model. In the experiments, the independent variables were the number of cars and passengers. First, a control test in which all of the agents were vehicles and there were no passengers was executed. This is the no-carpool situation. Then, the number of passengers increased, while reducing the number of vehicles in such a way that the sum of passengers and vehicles remained constant. The number of total car movements was measured in each experiment.
